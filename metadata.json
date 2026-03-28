@@ -1,0 +1,8 @@
+{
+  "name": "AI Voice Interviewer Pro",
+  "description": "A fully functional, voice-based AI interview platform with real-time coding IDE and performance analytics.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera"
+  ]
+}

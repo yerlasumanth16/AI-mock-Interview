@@ -1,0 +1,79 @@
+{
+  "entities": {
+    "Interview": {
+      "title": "Interview",
+      "description": "A record of an AI interview session.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The UID of the user who took the interview."
+        },
+        "company": {
+          "type": "string",
+          "description": "The target company for the interview."
+        },
+        "role": {
+          "type": "string",
+          "description": "The target role for the interview."
+        },
+        "interviewerId": {
+          "type": "string",
+          "description": "The ID of the AI interviewer persona."
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of the interview (e.g., Technical, Behavioral)."
+        },
+        "difficulty": {
+          "type": "string",
+          "description": "The difficulty level of the interview."
+        },
+        "score": {
+          "type": "number",
+          "description": "The final score of the interview."
+        },
+        "feedback": {
+          "type": "string",
+          "description": "Overall feedback for the interview."
+        },
+        "strengths": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of strengths identified."
+        },
+        "weaknesses": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of weaknesses identified."
+        },
+        "ratings": {
+          "type": "object",
+          "description": "Specific ratings for different skills."
+        },
+        "improvementPlan": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Actionable steps for improvement."
+        },
+        "faangReadiness": {
+          "type": "string",
+          "description": "Assessment of FAANG readiness."
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "The timestamp when the interview was created."
+        }
+      },
+      "required": ["userId", "company", "role", "interviewerId", "type", "difficulty", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/interviews/{interviewId}": {
+      "schema": {
+        "$ref": "#/entities/Interview"
+      },
+      "description": "Stores all interview sessions."
+    }
+  }
+}

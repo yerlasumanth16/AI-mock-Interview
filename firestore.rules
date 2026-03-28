@@ -1,0 +1,122 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: interviews
+    // Document ID: auto-generated
+    // Fields:
+    //   - userId: string (required, immutable) - The UID of the user who took the interview.
+    //   - company: string (required, immutable) - The target company for the interview.
+    //   - role: string (required, immutable) - The target role for the interview.
+    //   - interviewerId: string (required, immutable) - The ID of the AI interviewer persona.
+    //   - type: string (required, immutable) - The type of the interview.
+    //   - difficulty: string (required, immutable) - The difficulty level.
+    //   - score: number (optional) - The final score of the interview.
+    //   - feedback: string (optional) - Overall feedback.
+    //   - strengths: list (optional) - List of strengths.
+    //   - weaknesses: list (optional) - List of weaknesses.
+    //   - ratings: map (optional) - Specific ratings.
+    //   - improvementPlan: list (optional) - Actionable steps.
+    //   - faangReadiness: string (optional) - FAANG readiness assessment.
+    //   - createdAt: timestamp (required, immutable) - The timestamp when the interview was created.
+    //
+    // Collection: users
+    // Document ID: user UID
+    // Fields:
+    //   - settings: map (optional) - User settings.
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function uidUnchanged(field) {
+      return !(field in request.resource.data) || request.resource.data[field] == request.auth.uid;
+    }
+    
+    function uidNotModified(field) {
+      return !(field in request.resource.data) || request.resource.data[field] == resource.data[field];
+    }
+    
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+    
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+    
+    function areImmutableFieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidInterview(data) {
+      return hasOnlyAllowedFields(['userId', 'company', 'role', 'interviewerId', 'type', 'difficulty', 'score', 'feedback', 'strengths', 'weaknesses', 'ratings', 'improvementPlan', 'faangReadiness', 'createdAt']) &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() < 100 &&
+             data.company is string && data.company.size() > 0 && data.company.size() < 100 &&
+             data.role is string && data.role.size() > 0 && data.role.size() < 100 &&
+             data.interviewerId is string && data.interviewerId.size() > 0 && data.interviewerId.size() < 100 &&
+             data.type is string && data.type.size() > 0 && data.type.size() < 50 &&
+             data.difficulty is string && data.difficulty.size() > 0 && data.difficulty.size() < 50 &&
+             (!('score' in data) || (data.score is number && data.score >= 0 && data.score <= 100)) &&
+             (!('feedback' in data) || (data.feedback is string && data.feedback.size() < 5000)) &&
+             (!('strengths' in data) || (data.strengths is list && data.strengths.size() < 50)) &&
+             (!('weaknesses' in data) || (data.weaknesses is list && data.weaknesses.size() < 50)) &&
+             (!('ratings' in data) || (data.ratings is map)) &&
+             (!('improvementPlan' in data) || (data.improvementPlan is list && data.improvementPlan.size() < 50)) &&
+             (!('faangReadiness' in data) || (data.faangReadiness is string && data.faangReadiness.size() < 1000)) &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['settings']) &&
+             (!('settings' in data) || (data.settings is map));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data);
+      allow delete: if isOwner(userId);
+    }
+
+    match /interviews/{interviewId} {
+      allow read: if isAuthenticated() && isOwner(resource.data.userId);
+      
+      allow create: if isAuthenticated() && 
+                       hasRequiredFields(['userId', 'company', 'role', 'interviewerId', 'type', 'difficulty', 'createdAt']) &&
+                       isValidInterview(request.resource.data) && 
+                       uidUnchanged('userId');
+                       
+      allow update: if isAuthenticated() && 
+                       isOwner(resource.data.userId) && 
+                       isValidInterview(request.resource.data) && 
+                       uidNotModified('userId') && 
+                       areImmutableFieldsUnchanged(['userId', 'createdAt', 'company', 'role', 'interviewerId', 'type', 'difficulty']);
+                       
+      allow delete: if isAuthenticated() && isOwner(resource.data.userId);
+    }
+  }
+}
